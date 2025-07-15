@@ -1,13 +1,19 @@
 #include <Novice.h>
-#include<Vector3.h>
 #include<cmath>
-#include<Matrix4x4.h>
 #include <assert.h>
 
 const char kWindowTitle[] = "GC1C_08_タナカ_ショウヤ_タイトル";
 const int kWindowWidth = 1280;
 const int kWindowHeight = 720;
 
+
+struct Vector3 {
+	float x, y, z;
+};
+struct Matrix4x4
+{
+	float m[4][4];
+};
 Matrix4x4 MakeRotateXMatrix(float radian) {
 	Matrix4x4 result;
 
@@ -363,6 +369,29 @@ Vector3 Cross(const Vector3& v1, const Vector3& v2) {
 	return result;
 
 };
+
+void DraeGrid(const Matrix4x4& viewProjetctionMatrix, const Matrix4x4& viewportMatrix) {
+	const float kGridHalfWidth = 2.0f;
+	const uint32_t kSubdivision = 10;
+	const float kGridEvery = (kGridHalfWidth * 2.0f) / float(kSubdivision);
+	
+	for (uint32_t xIndex = 0; xIndex <= kSubdivision; ++xIndex) {
+		float x = -kGridHalfWidth + xIndex * kGridEvery;
+		Vector3 start = { x,0.0f,-kGridHalfWidth };
+		Vector3 End = { x,0.0f,kGridHalfWidth };
+		start = Transform(Transform(start, viewProjetctionMatrix), viewportMatrix);
+		End = Transform(Transform(End, viewProjetctionMatrix), viewportMatrix);
+		Novice::DrawLine((int)start.x,(int)start.y,(int)End.x,(int)End.y,0xAAAAAAFF);
+	}
+	for (uint32_t zIndex = 0; zIndex <= kSubdivision; ++zIndex) {
+		float z = -kGridHalfWidth + zIndex * kGridEvery;
+		Vector3 start = { -kGridHalfWidth ,0.0f,z };
+		Vector3 End = { kGridHalfWidth ,0.0f,z };
+		start = Transform(Transform(start, viewProjetctionMatrix), viewportMatrix);
+		End = Transform(Transform(End, viewProjetctionMatrix), viewportMatrix);
+		Novice::DrawLine((int)start.x, (int)start.y, (int)End.x, (int)End.y, 0xAAAAAAFF);
+	}
+}
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {

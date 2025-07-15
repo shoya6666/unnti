@@ -14,6 +14,11 @@ struct Matrix4x4
 {
 	float m[4][4];
 };
+struct Sphere
+{
+	Vector3 center;
+	float radius;
+};
 Matrix4x4 MakeRotateXMatrix(float radian) {
 	Matrix4x4 result;
 
@@ -391,6 +396,10 @@ void DraeGrid(const Matrix4x4& viewProjetctionMatrix, const Matrix4x4& viewportM
 		End = Transform(Transform(End, viewProjetctionMatrix), viewportMatrix);
 		Novice::DrawLine((int)start.x, (int)start.y, (int)End.x, (int)End.y, 0xAAAAAAFF);
 	}
+}
+
+void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+
 }
 
 // Windowsアプリでのエントリーポイント(main関数)

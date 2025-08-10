@@ -31,6 +31,9 @@ struct Segment
 {
 	Vector3 origin;
 	Vector3 diff;
+	// 線分パラメータ範囲
+	static constexpr float kMin = 0.0f;
+	static constexpr float kMax = 1.0f;
 };
 struct Ray {
 	Vector3 origin;
@@ -563,13 +566,16 @@ Vector3 ClosestPoint(const Vector3& point, const Segment& segment) {
 	return closest;
 }
 
-bool IsCollision(const Sphere& s1, const Plane& plane) {
-	// 球の中心から平面までの距離
-	float distance = s1.center.x * plane.normal.x +
-		s1.center.y * plane.normal.y +
-		s1.center.z * plane.normal.z - plane.distance;
+bool IsCollision(const Segment& segment, const Plane& plane) {
 
-	if (std::abs(distance) <= s1.radius) {
+	float dot = Dot(plane.normal, Subtract(segment.diff, segment.origin));
+	if (dot == 0.0f)
+	{
+		return false;
+	}
+	float t = (plane.distance - Dot(segment.origin, plane.normal)) / dot;
+
+	if (t >= Segment::kMin && t <= Segment::kMax) {
 
 		color_ = RED;
 
@@ -680,15 +686,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 
-
-
 		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, cameraTranslate);
 		Matrix4x4 viewMatrix = Inverse(cameraMatrix);
 		Matrix4x4 projectionMatrix = MakePerspectiveForMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		IsCollision(sphere1, plane);
+		Vector3 start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
+		Vector3 end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
+
+		IsCollision(segment, plane);
 
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
@@ -697,6 +704,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat("SphereRadius", &sphere1.radius, 0.01f);
 		ImGui::InputFloat3("Project", &project.x, "%.3f", ImGuiInputTextFlags_ReadOnly);
 		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
+		ImGui::DragFloat3("segment origin", &segment.origin.x, 0.01f);
+		ImGui::DragFloat3("segment diff", &segment.diff.x, 0.01f);
 		ImGui::End();
 
 		plane.normal = Normalize(plane.normal);
@@ -711,11 +720,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		DrawSphere(sphere1, viewProjectionMatrix, viewportMatrix, color_);
+		//DrawSphere(sphere1,viewProjectionMatrix,viewportMatrix,color_);
 
 		DrawPlane(plane, viewProjectionMatrix, viewportMatrix, WHITE);
 
-
+		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), color_);
 
 		///
 		/// ↑描画処理ここまで

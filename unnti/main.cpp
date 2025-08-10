@@ -621,6 +621,7 @@ bool IsCollision(const AABB& aabb1, const Segment& segment) {
 
 	return false;
 };
+
 Vector3 Perpendicular(const Vector3& vector) {
 	if (vector.x != 0.0f || vector.y != 0.0f) {
 		return { -vector.y, vector.x, 0.0f };
@@ -717,10 +718,52 @@ void DrawAABB(const AABB& aabb, const Matrix4x4& viewProjectionMatrix, const Mat
 	}
 };
 
+Vector3 Lerp(const Vector3& v1, const Vector3& v2, float t) {
+	Vector3 result;
+
+	result.x = std::lerp(v1.x, v2.x, t);
+	result.y = std::lerp(v1.y, v2.y, t);
+	result.z = std::lerp(v1.z, v2.z, t);
+
+	return result;
+	//return Add(v1, Vec3Multiply(Subtract(v2, v1), t));
+};
+
+void DrawBezier(const Vector3& controlPoint0, const Vector3& controlPoint1, const Vector3& controlPoint2, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color) {
+
+	const uint32_t kSubdivision = 20;
+
+	Matrix4x4 vp = Multiply(viewProjectionMatrix, viewportMatrix);
+
+	for (uint32_t i = 0; i < kSubdivision; i++)
+	{
+		float t = static_cast<float>(i) / kSubdivision;
+		float t2 = static_cast<float>(i + 1) / kSubdivision;
+
+		Vector3 p0p1 = Lerp(controlPoint0, controlPoint1, t);
+		Vector3 p1p2 = Lerp(controlPoint1, controlPoint2, t);
+
+		Vector3 p = Lerp(p0p1, p1p2, t);
+
+		Vector3 p0p1_ = Lerp(controlPoint0, controlPoint1, t2);
+		Vector3 p1p2_ = Lerp(controlPoint1, controlPoint2, t2);
+
+		Vector3 p2 = Lerp(p0p1_, p1p2_, t2);
+
+		p = Transform(p, vp);
+		p2 = Transform(p2, vp);
+
+		/*Transform(Transform(p, viewProjectionMatrix), viewportMatrix);
+		Transform(Transform(p2, viewProjectionMatrix), viewportMatrix);*/
+
+		Novice::DrawLine(int(p.x), int(p.y), int(p2.x), int(p2.y), color);
+	}
+
+
+};
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
-
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, kWindowWidth, kWindowHeight);
 
@@ -730,6 +773,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
 	Vector3 cameraTranslate{ 0.0f,1.9f,-6.49f };
+
+	Vector3 controlPoints[3] = {
+		{-0.8f,0.58f,1.0f},
+		{1.76f,1.0f,-0.3f},
+		{0.94f,-0.7f,2.3f},
+	};
 
 	Segment segment{
 		.origin{-0.7f,0.3f,-0.0f},
@@ -771,9 +820,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("aabb1.min", &aabb1.min.x, 0.01f);
-		ImGui::DragFloat3("aabb1.max", &aabb1.max.x, 0.01f);
-
+		ImGui::DragFloat3("controlPoint[0]", &controlPoints[0].x, 0.01f);
+		ImGui::DragFloat3("controlPoint[1]", &controlPoints[1].x, 0.01f);
+		ImGui::DragFloat3("controlPoint[2]", &controlPoints[2].x, 0.01f);
 		ImGui::End();
 
 
@@ -787,9 +836,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		DrawAABB(aabb1, viewProjectionMatrix, viewportMatrix, color_);
+		DrawSphere({ controlPoints[0],0.01f }, viewProjectionMatrix, viewportMatrix, BLACK);
+		DrawSphere({ controlPoints[1],0.01f }, viewProjectionMatrix, viewportMatrix, BLACK);
+		DrawSphere({ controlPoints[2],0.01f }, viewProjectionMatrix, viewportMatrix, BLACK);
 
-		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
+		DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], viewProjectionMatrix, viewportMatrix, BLUE);
 
 		///
 		/// ↑描画処理ここまで

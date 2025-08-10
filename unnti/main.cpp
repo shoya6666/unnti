@@ -105,6 +105,16 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
 	return result;
 }
 
+//減算
+Vector3 Subtract(const Vector3& v1, const Vector3& v2) {
+	Vector3 result;
+	result.x = v1.x - v2.x;
+	result.y = v1.y - v2.y;
+	result.z = v1.z - v2.z;
+
+	return result;
+}
+
 //行列の積
 Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
 	Matrix4x4 result;
@@ -470,8 +480,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	Segment segment{ {-2.0f,-1.0f,0.0f},3.0f,2.0f,2.0f };
 	Vector3 point{ -1.5f,0.6f,0.6f };
-	//
-	Vector3 project = Project(Subtract)
+	
+	Vector3 project = Project(Subtract(point, segment.origin), segment.diff);
+
+	Vector3 closestPoint = ClosestPoin(point, segment);
+
+	Sphere pointSphere{ point,0.01f };
+	Sphere closestPointSphere{ closestPoint,0.01f };
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -486,7 +501,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓更新処理ここから
 		///
 
-		
+	
 		
 		/// ↑更新処理ここまで
 		///
@@ -495,7 +510,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		
+		DrawSphere(pointSphere,viewProjectMatrix)
 
 		///
 		/// ↑描画処理ここまで

@@ -505,43 +505,46 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 }
 
 Vector3 Project(const Vector3& v1, const Vector3& v2) {
-	float dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-
-	float length = v2.x * v2.x + v2.y * v2.y + v2.z * v2.z;
-
-	assert(length != 0.0f);
-
-	float scale = dot / length;
-
-	return { scale * v2.x,scale * v2.y,scale * v2.z };
+	float dotProduct = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;    // 内積の計算
+	float lengthSquared = v2.x * v2.x + v2.y * v2.y + v2.z * v2.z; // ベクトルの長さの二乗
+	assert(lengthSquared != 0.0f);                                 // ゼロ除算を防ぐためのアサーション
+	float scale = dotProduct / lengthSquared;                      // スケールの計算
+	return { scale * v2.x, scale * v2.y, scale * v2.z };           // 射影ベクトルを返す
 }
 
 Vector3 ClosestPoin(const Vector3& point, const Segment& segment) {
+	// 始点
 	const Vector3& a = segment.origin;
 
+	// 終点 = 始点 + 差分ベクトル
 	Vector3 b = add(segment.origin, segment.diff);
 
-	Vector3 ab = { b.x - a.x,b.y - a.y,b.z - a.z };
+	// abベクトル
+	Vector3 ab = { b.x - a.x, b.y - a.y, b.z - a.z };
 
-	Vector3 ap = { point.x - a.x,point.y - a.y,point.z - a.z };
+	// apベクトル
+	Vector3 ap = { point.x - a.x, point.y - a.y, point.z - a.z };
 
+	// abの長さの2乗
 	float abLenSq = ab.x * ab.x + ab.y * ab.y + ab.z * ab.z;
-
 	if (abLenSq == 0.0f) {
+		// 始点と終点が同じ場合は始点を返す
 		return a;
 	}
 
-	float t = (ab.x * ab.x + ab.y * ab.y + ab.z * ab.z) / abLenSq;
+	// tを計算
+	float t = (ap.x * ab.x + ap.y * ab.y + ap.z * ab.z) / abLenSq;
 
-	if (t < 0.0f) {
-		t = 0.0f;
-	}
+	// 0～1でクランプ
+	if (t < 0.0f) t = 0.0f;
+	if (t > 1.0f) t = 1.0f;
 
-	if (t > 1.0f) {
-		t = 1.0f;
-	}
-
-	Vector3 closest = { a.x + ab.x * t,a.y + ab.y * t,a.z + ab.z * t };
+	// 最近点
+	Vector3 closest = {
+		a.x + ab.x * t,
+		a.y + ab.y * t,
+		a.z + ab.z * t
+	};
 
 	return closest;
 }

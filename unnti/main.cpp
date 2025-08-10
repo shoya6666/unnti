@@ -1,9 +1,11 @@
-#define _USE_MATH_DEFINES
-#include <math.h>
 #include <Novice.h>
 #include<cmath>
 #include <assert.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <imgui.h>
+#include <cassert>
+#include <algorithm>
 
 const char kWindowTitle[] = "GC1C_08_タナカ_ショウヤ_タイトル";
 const int kWindowWidth = 1280;
@@ -577,11 +579,18 @@ Vector3 Vec3Multiply(const Vector3& v, float scalar)
 	return { v.x * scalar, v.y * scalar, v.z * scalar };
 }
 
-bool IsCollision(const AABB& aabb1, const AABB& aabb2) {
+bool IsCollision(const AABB& aabb1, const Sphere& sphere) {
 
-	if ((aabb1.min.x <= aabb2.max.x && aabb1.max.x >= aabb2.min.x) &&
-		(aabb1.min.y <= aabb2.max.y && aabb1.max.y >= aabb2.min.y) &&
-		(aabb1.min.z <= aabb2.max.z && aabb1.max.z >= aabb2.min.z)) {
+	Vector3 closestPoint
+	{
+		std::clamp(sphere.center.x,aabb1.min.x,aabb1.max.x),
+		std::clamp(sphere.center.y,aabb1.min.y,aabb1.max.y),
+		std::clamp(sphere.center.z,aabb1.min.z,aabb1.max.z),
+	};
+
+	float distance = Length(closestPoint - sphere.center);
+
+	if (distance <= sphere.radius) {
 
 		color_ = RED;
 		return true;
@@ -592,7 +601,6 @@ bool IsCollision(const AABB& aabb1, const AABB& aabb2) {
 
 	return false;
 };
-
 Vector3 Perpendicular(const Vector3& vector) {
 	if (vector.x != 0.0f || vector.y != 0.0f) {
 		return { -vector.y, vector.x, 0.0f };
@@ -703,42 +711,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
 	Vector3 cameraTranslate{ 0.0f,1.9f,-6.49f };
 
-	Sphere sphere1 = { 0.0f,0.0f,1.0f,1.0f };
-	Sphere sphere2 = { 2.0f,0.0f,1.0f,0.5f };
-
-	Segment segment{ {-2.0f,-1.0f,0.0f},{3.0f,2.0f,2.0f} };
-
-	Vector3 point{ -1.5f,0.6f,0.6f };
-
-	Vector3 project = Project(Subtract(point, segment.origin), segment.diff);
-
-	Vector3 closestPoint = ClosestPoint(point, segment);
-
-	Sphere pointSphere{ point,0.01f };
-
-	Sphere closestPointSphere{ closestPoint,0.01f };
-
-	Plane plane{
-		.normal = {0.0f,1.0f,0.0f},
-		.distance = 0.0f
-	};
-
-	Triangle triangle;
-
-	triangle.vertices[0] = { -1.0f,0.0f,0.0f };
-	triangle.vertices[1] = { 1.0f,0.0f,0.0f };
-	triangle.vertices[2] = { 0.0f,1.0f,0.0f };
+	Sphere sphere = { 0.0f,0.0f,1.0f,1.0f };
 
 	AABB aabb1
 	{
 		.min{-0.5f,-0.5f,-0.5f},
 		.max{0.0f,0.0f,0.0f},
 	};
-	AABB aabb2
-	{
-		.min{0.2f,0.2f,0.2f},
-		.max{1.0f,1.0f,1.0f},
-	};
+
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -760,22 +740,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		Vector3 start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
-		Vector3 end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
-
-		IsCollision(aabb1, aabb2);
+		IsCollision(aabb1, sphere);
 
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
+		ImGui::DragFloat3("sphere", &sphere.center.x, 0.01f);
+		ImGui::DragFloat("sphere", &sphere.radius, 0.01f);
 		ImGui::DragFloat3("aabb1.min", &aabb1.min.x, 0.01f);
 		ImGui::DragFloat3("aabb1.max", &aabb1.max.x, 0.01f);
-		ImGui::DragFloat3("aabb2.min", &aabb2.min.x, 0.01f);
-		ImGui::DragFloat3("aabb2.max", &aabb2.max.x, 0.01f);
 
 		ImGui::End();
 
-		plane.normal = Normalize(plane.normal);
 
 		///
 		/// ↑更新処理ここまで
@@ -787,10 +763,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		//DrawSphere(sphere1,viewProjectionMatrix,viewportMatrix,color_);
+		DrawSphere(sphere, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		DrawAABB(aabb1, viewProjectionMatrix, viewportMatrix, color_);
-		DrawAABB(aabb2, viewProjectionMatrix, viewportMatrix, WHITE);
 
 		///
 		/// ↑描画処理ここまで

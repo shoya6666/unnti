@@ -105,6 +105,15 @@ Matrix4x4 MakeRotateZMatrix(float radian) {
 	return result;
 }
 
+//加算
+Vector3 add(const Vector3& v1, const Vector3& v2) {
+	Vector3 result;
+	result.x = v1.x + v2.x;
+	result.y = v1.y + v2.y;
+	result.z = v1.z + v2.z;
+
+	return result;
+}
 //減算
 Vector3 Subtract(const Vector3& v1, const Vector3& v2) {
 	Vector3 result;
@@ -113,6 +122,38 @@ Vector3 Subtract(const Vector3& v1, const Vector3& v2) {
 	result.z = v1.z - v2.z;
 
 	return result;
+}
+//スカラー倍
+Vector3 Multiply(float scalar, const Vector3& v) {
+	Vector3 result;
+	result.x = scalar * v.x;
+	result.y = scalar * v.y;
+	result.z = scalar * v.z;
+
+	return result;
+}
+//内積
+float Dot(const Vector3& v1, const Vector3& v2) {
+	float result;
+	result = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+
+	return result;
+}
+//長さ（ノルム）
+float Length(const Vector3& v) {
+	float result;
+	result = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+
+	return result;
+}
+//正規化
+Vector3 Normalize(const Vector3& v) {
+	float length = Length(v);
+
+	if (length != 0) {
+		return { v.x / length,v.y / length,v.z / length };
+	}
+	return v;
 }
 
 //行列の積
@@ -463,9 +504,47 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 	}
 }
 
-Vector3 Project(const Vector3& v1, const Vector3& v2);
+Vector3 Project(const Vector3& v1, const Vector3& v2) {
+	float dot = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 
-Vector3 ClosestPoin(const Vector3& point, const Segment& segment);
+	float length = v2.x * v2.x + v2.y * v2.y + v2.z * v2.z;
+
+	assert(length != 0.0f);
+
+	float scale = dot / length;
+
+	return { scale * v2.x,scale * v2.y,scale * v2.z };
+}
+
+Vector3 ClosestPoin(const Vector3& point, const Segment& segment) {
+	const Vector3& a = segment.origin;
+
+	Vector3 b = add(segment.origin, segment.diff);
+
+	Vector3 ab = { b.x - a.x,b.y - a.y,b.z - a.z };
+
+	Vector3 ap = { point.x - a.x,point.y - a.y,point.z - a.z };
+
+	float abLenSq = ab.x * ab.x + ab.y * ab.y + ab.z * ab.z;
+
+	if (abLenSq == 0.0f) {
+		return a;
+	}
+
+	float t = (ab.x * ab.x + ab.y * ab.y + ab.z * ab.z) / abLenSq;
+
+	if (t < 0.0f) {
+		t = 0.0f;
+	}
+
+	if (t > 1.0f) {
+		t = 1.0f;
+	}
+
+	Vector3 closest = { a.x + ab.x * t,a.y + ab.y * t,a.z + ab.z * t };
+
+	return closest;
+}
 
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -513,7 +592,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 		Vector3 start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
-		
+		Vector3 end = Transform(Transform(add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
 		
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
@@ -530,8 +609,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
+		DrawGrid(viewProjectionMatrix, viewportMatrix);
 		DrawSphere(pointSphere, viewProjectionMatrix, viewportMatrix, RED);
 		DrawSphere(closestPointSphere, viewProjectionMatrix, viewportMatrix, BLACK);
+
+		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 
 		///
 		/// ↑描画処理ここまで

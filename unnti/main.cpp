@@ -774,10 +774,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
 	Vector3 cameraTranslate{ 0.0f,1.9f,-6.49f };
 
-	Vector3 controlPoints[3] = {
-		{-0.8f,0.58f,1.0f},
-		{1.76f,1.0f,-0.3f},
-		{0.94f,-0.7f,2.3f},
+	Vector3 translates[3] = {
+		{0.2f,1.0f,0.0f},
+		{0.4f,0.0f,0.0f},
+		{0.3f,0.0f,0.0f}
+	};
+
+	Vector3 rotates[3] = {
+		{0.0f,0.0f,-6.8f},
+		{0.0f,0.0f,-1.4f},
+		{0.0f,0.0f,0.0f}
+	};
+
+	Vector3 scales[3] = {
+		{1.0f,1.0f,1.0f},
+		{1.0f,1.0f,1.0f},
+		{1.0f,1.0f,1.0f}
 	};
 
 	Segment segment{
@@ -812,6 +824,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
+		Matrix4x4 shoulderMatrix = MakeAffineMatrix(scales[0], rotates[0], translates[0]);
+		Matrix4x4 elbowMatrixLocal = MakeAffineMatrix(scales[1], rotates[1], translates[1]);
+		Matrix4x4 wristMatrixLocal = MakeAffineMatrix(scales[2], rotates[2], translates[2]);
+
+		Matrix4x4 elbowMatrix = Multiply(elbowMatrixLocal, shoulderMatrix);
+		Matrix4x4 wristMatrix = Multiply(wristMatrixLocal, elbowMatrix);
+
+		Sphere shoulderSphere = { Transform({0, 0, 0}, shoulderMatrix), 0.05f };
+		Sphere elbowSphere = { Transform({0, 0, 0}, elbowMatrix),    0.05f };
+		Sphere wristSphere = { Transform({0, 0, 0}, wristMatrix),    0.05f };
+
+		Vector3 shoulderPos = Transform({ 0, 0, 0 }, shoulderMatrix);
+		Vector3 elbowPos = Transform({ 0, 0, 0 }, elbowMatrix);
+		Vector3 wristPos = Transform({ 0, 0, 0 }, wristMatrix);
+
+		shoulderPos = Transform(Transform(shoulderPos, viewProjectionMatrix), viewportMatrix);
+		elbowPos = Transform(Transform(elbowPos, viewProjectionMatrix), viewportMatrix);
+		wristPos = Transform(Transform(wristPos, viewProjectionMatrix), viewportMatrix);
+
 		Vector3 start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
 		Vector3 end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
 
@@ -820,9 +851,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
 		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("controlPoint[0]", &controlPoints[0].x, 0.01f);
-		ImGui::DragFloat3("controlPoint[1]", &controlPoints[1].x, 0.01f);
-		ImGui::DragFloat3("controlPoint[2]", &controlPoints[2].x, 0.01f);
+		ImGui::DragFloat3("translates[0]", &translates[0].x, 0.01f);
+		ImGui::DragFloat3("translates[1]", &translates[1].x, 0.01f);
+		ImGui::DragFloat3("translates[2]", &translates[2].x, 0.01f);
+		ImGui::DragFloat3("rotates[0]", &rotates[0].x, 0.01f);
+		ImGui::DragFloat3("rotates[1]", &rotates[1].x, 0.01f);
+		ImGui::DragFloat3("rotates[2]", &rotates[2].x, 0.01f);
+		ImGui::DragFloat3("scales[0]", &scales[0].x, 0.01f);
+		ImGui::DragFloat3("scales[1]", &scales[1].x, 0.01f);
+		ImGui::DragFloat3("scales[2]", &scales[2].x, 0.01f);
 		ImGui::End();
 
 
@@ -836,11 +873,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		DrawSphere({ controlPoints[0],0.01f }, viewProjectionMatrix, viewportMatrix, BLACK);
-		DrawSphere({ controlPoints[1],0.01f }, viewProjectionMatrix, viewportMatrix, BLACK);
-		DrawSphere({ controlPoints[2],0.01f }, viewProjectionMatrix, viewportMatrix, BLACK);
+		DrawSphere(shoulderSphere, viewProjectionMatrix, viewportMatrix, RED);
+		DrawSphere(elbowSphere, viewProjectionMatrix, viewportMatrix, GREEN);
+		DrawSphere(wristSphere, viewProjectionMatrix, viewportMatrix, BLUE);
 
-		DrawBezier(controlPoints[0], controlPoints[1], controlPoints[2], viewProjectionMatrix, viewportMatrix, BLUE);
+		Novice::DrawLine((int)shoulderPos.x, (int)shoulderPos.y, (int)elbowPos.x, (int)elbowPos.y, WHITE);
+		Novice::DrawLine((int)elbowPos.x, (int)elbowPos.y, (int)wristPos.x, (int)wristPos.y, WHITE);
 
 		///
 		/// ↑描画処理ここまで

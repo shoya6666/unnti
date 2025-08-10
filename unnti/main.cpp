@@ -16,6 +16,14 @@ uint32_t color_ = WHITE;
 
 struct Vector3 {
 	float x, y, z;
+	//加算
+	Vector3 operator+(const Vector3& other) const {
+		return { x + other.x, y + other.y, z + other.z };
+	}
+	//加算
+	Vector3 operator+(const float& other) const {
+		return { x + other, y + other, z + other};
+	}
 	// 減算
 	Vector3 operator-(const Vector3& other) const {
 		return { x - other.x, y - other.y, z - other.z };
@@ -24,6 +32,15 @@ struct Vector3 {
 struct Matrix4x4
 {
 	float m[4][4];
+	// 行列同士の乗算
+	Matrix4x4 operator*(const Matrix4x4& other) const {
+		Matrix4x4 result{};
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				for (int k = 0; k < 4; ++k)
+					result.m[i][j] += m[i][k] *other.m[k][j];
+		return result;
+	}
 };
 struct Sphere
 {
@@ -771,38 +788,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	char keys[256] = { 0 };
 	char preKeys[256] = { 0 };
 
-	Vector3 cameraRotate{ 0.26f,0.0f,0.0f };
-	Vector3 cameraTranslate{ 0.0f,1.9f,-6.49f };
-
-	Vector3 translates[3] = {
-		{0.2f,1.0f,0.0f},
-		{0.4f,0.0f,0.0f},
-		{0.3f,0.0f,0.0f}
-	};
-
-	Vector3 rotates[3] = {
-		{0.0f,0.0f,-6.8f},
-		{0.0f,0.0f,-1.4f},
-		{0.0f,0.0f,0.0f}
-	};
-
-	Vector3 scales[3] = {
-		{1.0f,1.0f,1.0f},
-		{1.0f,1.0f,1.0f},
-		{1.0f,1.0f,1.0f}
-	};
-
-	Segment segment{
-		.origin{-0.7f,0.3f,-0.0f},
-		.diff{2.0f,-0.5f,0.0f}
-	};
-
-	AABB aabb1
-	{
-		.min{-0.5f,-0.5f,-0.5f},
-		.max{0.0f,0.0f,0.0f},
-	};
-
+	Vector3 a{ 0.2f,1.0f,0.0f };
+	Vector3 b{ 2.4f,3.1f,1.2f };
+	Vector3 c = a + b;
+	Vector3 d = a - b;
+	Vector3 e = a + 2.4f;
+	Vector3 rotate{ 0.4f,1.43f,-0.8f };
+	Matrix4x4 rotateXMatrix = MakeRotateXMatrix(rotate.x);
+	Matrix4x4 rotateYMatrix = MakeRotateYMatrix(rotate.y);
+	Matrix4x4 rotateZMatrix = MakeRotateZMatrix(rotate.z);
+	Matrix4x4 rotateMatrix = rotateXMatrix * rotateYMatrix * rotateZMatrix;
 
 	// ウィンドウの×ボタンが押されるまでループ
 	while (Novice::ProcessMessage() == 0) {
@@ -818,49 +813,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 
-		Matrix4x4 cameraMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, cameraTranslate);
-		Matrix4x4 viewMatrix = Inverse(cameraMatrix);
-		Matrix4x4 projectionMatrix = MakePerspectiveForMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
-		Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
-		Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
-
-		Matrix4x4 shoulderMatrix = MakeAffineMatrix(scales[0], rotates[0], translates[0]);
-		Matrix4x4 elbowMatrixLocal = MakeAffineMatrix(scales[1], rotates[1], translates[1]);
-		Matrix4x4 wristMatrixLocal = MakeAffineMatrix(scales[2], rotates[2], translates[2]);
-
-		Matrix4x4 elbowMatrix = Multiply(elbowMatrixLocal, shoulderMatrix);
-		Matrix4x4 wristMatrix = Multiply(wristMatrixLocal, elbowMatrix);
-
-		Sphere shoulderSphere = { Transform({0, 0, 0}, shoulderMatrix), 0.05f };
-		Sphere elbowSphere = { Transform({0, 0, 0}, elbowMatrix),    0.05f };
-		Sphere wristSphere = { Transform({0, 0, 0}, wristMatrix),    0.05f };
-
-		Vector3 shoulderPos = Transform({ 0, 0, 0 }, shoulderMatrix);
-		Vector3 elbowPos = Transform({ 0, 0, 0 }, elbowMatrix);
-		Vector3 wristPos = Transform({ 0, 0, 0 }, wristMatrix);
-
-		shoulderPos = Transform(Transform(shoulderPos, viewProjectionMatrix), viewportMatrix);
-		elbowPos = Transform(Transform(elbowPos, viewProjectionMatrix), viewportMatrix);
-		wristPos = Transform(Transform(wristPos, viewProjectionMatrix), viewportMatrix);
-
-		Vector3 start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
-		Vector3 end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
-
-		IsCollision(aabb1, segment);
-
 		ImGui::Begin("Window");
-		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
-		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("translates[0]", &translates[0].x, 0.01f);
-		ImGui::DragFloat3("translates[1]", &translates[1].x, 0.01f);
-		ImGui::DragFloat3("translates[2]", &translates[2].x, 0.01f);
-		ImGui::DragFloat3("rotates[0]", &rotates[0].x, 0.01f);
-		ImGui::DragFloat3("rotates[1]", &rotates[1].x, 0.01f);
-		ImGui::DragFloat3("rotates[2]", &rotates[2].x, 0.01f);
-		ImGui::DragFloat3("scales[0]", &scales[0].x, 0.01f);
-		ImGui::DragFloat3("scales[1]", &scales[1].x, 0.01f);
-		ImGui::DragFloat3("scales[2]", &scales[2].x, 0.01f);
+		ImGui::Text("c: %f, %f, %f", c.x, c.y, c.z);
+		ImGui::Text("d: %f, %f, %f", d.x, d.y, d.z);
+		ImGui::Text("e: %f, %f, %f", e.x, e.y, e.z);
+		ImGui::Text(
+			"matrix:\n%f, %f, %f, %f\n%f, %f, %f, %f\n%f, %f, %f, %f\n%f, %f, %f, %f\n",
+			rotateMatrix.m[0][0], rotateMatrix.m[0][1], rotateMatrix.m[0][2], rotateMatrix.m[0][3],
+			rotateMatrix.m[1][0], rotateMatrix.m[1][1], rotateMatrix.m[1][2], rotateMatrix.m[1][3],
+			rotateMatrix.m[2][0], rotateMatrix.m[2][1], rotateMatrix.m[2][2], rotateMatrix.m[2][3],
+			rotateMatrix.m[3][0], rotateMatrix.m[3][1], rotateMatrix.m[3][2], rotateMatrix.m[3][3]);
 		ImGui::End();
+
 
 
 		///
@@ -871,14 +835,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		DrawGrid(viewProjectionMatrix, viewportMatrix);
 
-		DrawSphere(shoulderSphere, viewProjectionMatrix, viewportMatrix, RED);
-		DrawSphere(elbowSphere, viewProjectionMatrix, viewportMatrix, GREEN);
-		DrawSphere(wristSphere, viewProjectionMatrix, viewportMatrix, BLUE);
 
-		Novice::DrawLine((int)shoulderPos.x, (int)shoulderPos.y, (int)elbowPos.x, (int)elbowPos.y, WHITE);
-		Novice::DrawLine((int)elbowPos.x, (int)elbowPos.y, (int)wristPos.x, (int)wristPos.y, WHITE);
 
 		///
 		/// ↑描画処理ここまで
